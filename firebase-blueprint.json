@@ -1,0 +1,158 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "createdAt"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "A company workspace owned by a user",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "taxId": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "accountDetails": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "createdAt"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A client belonging to a company",
+      "type": "object",
+      "properties": {
+        "companyId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyId", "name", "createdAt"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "An invoice generated for a client",
+      "type": "object",
+      "properties": {
+        "companyId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "issueDate": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "discount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyId", "clientId", "invoiceNumber", "totalAmount", "status", "createdAt"]
+    },
+    "Bill": {
+      "title": "Bill",
+      "description": "A custom utility-style bill",
+      "type": "object",
+      "properties": {
+        "companyId": { "type": "string" },
+        "billData": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyId", "billData", "createdAt"]
+    },
+    "Payslip": {
+      "title": "Payslip",
+      "description": "Employee payslip document",
+      "type": "object",
+      "properties": {
+        "companyId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "designation": { "type": "string" },
+        "period": { "type": "string" },
+        "earnings": { "type": "array" },
+        "deductions": { "type": "array" },
+        "netPay": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyId", "employeeName", "netPay", "createdAt"]
+    },
+    "Resume": {
+      "title": "Resume",
+      "description": "Professional resume document",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "personalInfo": { "type": "object" },
+        "experience": { "type": "array" },
+        "education": { "type": "array" },
+        "skills": { "type": "array" },
+        "config": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "personalInfo", "createdAt"]
+    },
+    "IdCard": {
+      "title": "Identity Card",
+      "description": "Identification mockup document",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "surname": { "type": "string" },
+        "firstNames": { "type": "string" },
+        "dob": { "type": "string" },
+        "driverNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "surname", "firstNames", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Company workspaces"
+    },
+    "/clients/{clientId}": {
+      "schema": { "$ref": "#/entities/Client" },
+      "description": "Clients for companies"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/Invoice" },
+      "description": "Invoices for clients"
+    },
+    "/bills/{billId}": {
+      "schema": { "$ref": "#/entities/Bill" },
+      "description": "Custom utility bills"
+    },
+    "/payslips/{payslipId}": {
+      "schema": { "$ref": "#/entities/Payslip" },
+      "description": "Employee payslips"
+    },
+    "/resumes/{resumeId}": {
+      "schema": { "$ref": "#/entities/Resume" },
+      "description": "User resumes"
+    },
+    "/id_cards/{idCardId}": {
+      "schema": { "$ref": "#/entities/IdCard" },
+      "description": "Identity card mockups"
+    }
+  }
+}

@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isCompanyOwner(companyId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/companies/$(companyId)) &&
+        get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['email', 'name', 'createdAt']) &&
+             data.email is string && data.email.size() > 0 && data.email.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.createdAt is string;
+    }
+
+    function isValidCompany() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['ownerId', 'name', 'createdAt']) &&
+             data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
+             (!('taxId' in data) || (data.taxId is string && data.taxId.size() < 50)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
+             (!('email' in data) || (data.email is string && data.email.size() < 100)) &&
+             (!('accountDetails' in data) || (data.accountDetails is string && data.accountDetails.size() < 1000)) &&
+             data.createdAt is string;
+    }
+
+    function isValidClient() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['companyId', 'name', 'createdAt']) &&
+             isCompanyOwner(data.companyId) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() < 100)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
+             data.createdAt is string;
+    }
+
+    function isValidInvoice() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['companyId', 'clientId', 'invoiceNumber', 'totalAmount', 'status', 'createdAt']) &&
+             isCompanyOwner(data.companyId) &&
+             data.invoiceNumber is string && data.invoiceNumber.size() > 0 && data.invoiceNumber.size() < 50 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.status in ['draft', 'sent', 'paid', 'overdue'] &&
+             data.createdAt is string;
+    }
+
+    function isValidBill() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['companyId', 'billData', 'createdAt']) &&
+             isCompanyOwner(data.companyId) &&
+             data.billData is string &&
+             data.createdAt is string;
+    }
+
+    function isValidPayslip() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['companyId', 'employeeName', 'netPay', 'createdAt']) &&
+             isCompanyOwner(data.companyId) &&
+             data.employeeName is string && data.employeeName.size() > 0 && data.employeeName.size() < 100 &&
+             data.netPay is number && data.netPay >= 0 &&
+             data.createdAt is string;
+    }
+
+    function isValidResume() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'personalInfo', 'createdAt']) &&
+             isOwner(data.userId) &&
+             data.createdAt is string;
+    }
+
+    function isValidIdCard() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['userId', 'type', 'surname', 'firstNames', 'createdAt']) &&
+             isOwner(data.userId) &&
+             data.type is string &&
+             data.surname is string &&
+             data.firstNames is string &&
+             data.createdAt is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser();
+      allow update: if isOwner(userId) && isValidUser() && request.resource.data.email == resource.data.email;
+    }
+
+    match /companies/{companyId} {
+      allow read: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidCompany();
+      allow update: if isAuthenticated() && resource.data.ownerId == request.auth.uid && isValidCompany() && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+      allow create: if isAuthenticated() && isValidClient();
+      allow update: if isAuthenticated() && isCompanyOwner(resource.data.companyId) && isValidClient() && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+      allow create: if isAuthenticated() && isValidInvoice();
+      allow update: if isAuthenticated() && isCompanyOwner(resource.data.companyId) && isValidInvoice() && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+    }
+
+    match /bills/{billId} {
+      allow read: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+      allow create: if isAuthenticated() && isValidBill();
+      allow update: if isAuthenticated() && isCompanyOwner(resource.data.companyId) && isValidBill() && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+    }
+
+    match /payslips/{payslipId} {
+      allow read: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+      allow create: if isAuthenticated() && isValidPayslip();
+      allow update: if isAuthenticated() && isCompanyOwner(resource.data.companyId) && isValidPayslip() && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if isAuthenticated() && isCompanyOwner(resource.data.companyId);
+    }
+
+    match /resumes/{resumeId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidResume();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidResume() && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /id_cards/{idCardId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidIdCard();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidIdCard() && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
